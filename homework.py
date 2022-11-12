@@ -1,20 +1,20 @@
 """Здесь будет докстринг."""
 import logging
-
 import os
+import requests
+import sys
 import time
 
-import requests
+import exceptions
 
 from datetime import datetime
-
 from telegram import Bot
-
 from dotenv import load_dotenv
+from http import HTTPStatus
 
 load_dotenv()
 
-
+# Переменные окружения
 PRACTICUM_TOKEN = os.getenv("PRACTICUM_TOKEN")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -29,28 +29,50 @@ HOMEWORK_STATUSES = {
     "rejected": "Работа проверена: у ревьюера есть замечания.",
 }
 
+# Статус д.з. храним глобально
 STATUS = None
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+# Статус отправленного исключения
+EXCEPT_MESSAGE_STATUS = None
+
+# Начало настройки логгирования
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+FORMAT = "%(asctime)s [%(levelname)s] - %(message)s"
+formatter = logging.Formatter(FORMAT)
+
+handler = logging.StreamHandler(stream=sys.stdout)
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+# Конец настройки логгирования
 
 
 def send_message(bot, message):
-    """Здесь будет докстринг."""
-    bot.send_message(TELEGRAM_CHAT_ID, message)
+    """Бот отправляет сообщение."""
+    try:
+        bot.send_message(TELEGRAM_CHAT_ID, message)
+    except Exception as error:
+        logger.error(f"Ошибка при отправке сообшения: {error}")
+    else:
+        logger.info(f"Бот отправил сообщение {message}")
 
 
-def get_api_answer(current_timestamp):
-    """Здесь будет докстринг."""
+def get_api_answer(current_timestamp: int) -> dict:
+    """Делаем запрос к эндпоинту API-сервиса."""
     params = {"from_date": current_timestamp}
-    response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    try:
+        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    except Exception as error:
+        logging.error(f"Ошибка при запросе к основному API: {error}")
+    if response.status_code != HTTPStatus.OK:
+        raise exceptions.EndpointResponseError(response.status_code)
     return response.json()
 
 
 def check_response(response):
-    """Здесь будет докстринг."""
+    """Проверяем API на корректность."""
     if "homeworks" in response:
         return response.get("homeworks")
     return "Список пуст"
@@ -68,22 +90,37 @@ def parse_status(homework):
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
-def check_tokens():
+def check_tokens() -> bool:
     """Проверяет доступность переменных окружения."""
-    if PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        return True
-    return False
+    env_variables = {
+        "PRACTICUM_TOKEN": PRACTICUM_TOKEN,
+        "TELEGRAM_TOKEN": TELEGRAM_TOKEN,
+        "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
+    }
+    for variable in env_variables:
+        if not env_variables[variable]:
+            logger.critical(
+                f"Отсутствует обязательная переменная окружения: '{variable}' "
+                "Программа принудительно остановлена."
+            )
+            return False
+    return True
 
 
-def main():
+def main() -> None:
     """Основная логика работы бота."""
     check = check_tokens()
+
+    if not check:
+        sys.exit()
+
     bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = 0
+
     while check:
         try:
             response = get_api_answer(current_timestamp)
-            # current_timestamp = response.get("current_date")
+            # сurrent_timestamp = response.get("current_date")
             homeworks = check_response(response)
             if len(homeworks) == 0:
                 dt = datetime.utcfromtimestamp(current_timestamp).strftime(
@@ -96,9 +133,15 @@ def main():
                 if message != "Не изменился":
                     send_message(bot, message)
                 time.sleep(RETRY_TIME)
+        # except exceptions.EndpointResponseError as error:
+        #     logger.error(error)
         except Exception as error:
+            global EXCEPT_MESSAGE_STATUS
             message = f"Сбой в работе программы: {error}"
-            logging.error(message)
+            logger.error(message)
+            if message != EXCEPT_MESSAGE_STATUS:
+                send_message(bot, message)
+                EXCEPT_MESSAGE_STATUS = message
             time.sleep(RETRY_TIME)
         else:
             pass
