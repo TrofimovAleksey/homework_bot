@@ -7,8 +7,9 @@ import time
 
 import exceptions
 
-from telegram import Bot
+from datetime import datetime
 from dotenv import load_dotenv
+from telegram import Bot
 from http import HTTPStatus
 
 load_dotenv()
@@ -144,7 +145,13 @@ def main() -> None:
                 if message != "Статус дз не изменился":
                     send_message(bot, message)
             else:
-                message = f"Работ находящихся на проверке не обнаружено."
+                ts = datetime.utcfromtimestamp(current_timestamp).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+                message = (
+                    f"Начиная с {ts} работ находящихся на проверке не "
+                    "обнаружено."
+                )
         except Exception as error:
             global EXCEPT_MESSAGE_STATUS
             message = f"Сбой в работе программы: {error}"
