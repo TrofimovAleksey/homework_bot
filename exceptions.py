@@ -9,10 +9,3 @@ class EndpointResponseError(Exception):
             "Эндпоинт API Яндекс.Практикума недоступен: "
             f"Код ответа: {self.status_code}"
         )
-
-
-class NotHomeWorks(Exception):
-    """Ошибка вызванная отсутствием новых работ от даты current_date."""
-
-    def __str__(self) -> str:
-        return f"Работа ещё не взята на проверку."

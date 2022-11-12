@@ -79,8 +79,6 @@ def check_response(response: dict) -> list:
     homeworks = response.get("homeworks")
     if not isinstance(homeworks, list):
         raise TypeError("Ключ homeworks не сожедржит списка")
-    if len(homeworks) == 0:
-        raise exceptions.NotHomeWorks()
     return homeworks
 
 
@@ -141,9 +139,12 @@ def main() -> None:
             response = get_api_answer(current_timestamp)
             current_timestamp = response.get("current_date")
             homeworks = check_response(response)
-            message = parse_status(homeworks[0])
-            if message != "Статус дз не изменился":
-                send_message(bot, message)
+            if homeworks:
+                message = parse_status(homeworks[0])
+                if message != "Статус дз не изменился":
+                    send_message(bot, message)
+            else:
+                message = f"Работ находящихся на проверке не обнаружено."
         except Exception as error:
             global EXCEPT_MESSAGE_STATUS
             message = f"Сбой в работе программы: {error}"
