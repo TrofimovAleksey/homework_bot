@@ -145,13 +145,7 @@ def main() -> None:
                 else:
                     message = "Статус дз не изменился"
             else:
-                ts = datetime.utcfromtimestamp(current_timestamp).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                message = (
-                    f"Начиная с {ts} работ находящихся на проверке не "
-                    "обнаружено."
-                )
+                message = "Программа функционирует, сбоев нет"
         except Exception as error:
             message = f"Сбой в работе программы: {error}"
             logger.error(message)
