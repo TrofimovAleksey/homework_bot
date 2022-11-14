@@ -8,7 +8,6 @@ import time
 
 import exceptions
 
-from datetime import datetime
 from dotenv import load_dotenv
 from telegram import Bot
 from http import HTTPStatus
