@@ -88,10 +88,8 @@ def parse_status(homework: dict) -> str:
     for key in homework_keys:
         if key not in homework:
             raise KeyError(f"Ключа {key} нет в словаре homework")
-        if key == "homework_name":
-            homework_name = homework.get(key)
-        else:
-            homework_status = homework.get(key)
+    homework_name = homework.get(homework_keys[0])
+    homework_status = homework.get(homework_keys[1])
 
     if homework_status not in VERDICTS:
         raise ValueError(
@@ -158,9 +156,9 @@ def main() -> None:
             message = f"Сбой в работе программы: {error}"
             logger.error(message)
             if message != except_message_status:
-                except_message_status = message
                 flag = send_message(bot, message)
                 if flag:
+                    except_message_status = message
                     logger.info(f"Бот отправил сообщение {message}")
             time.sleep(RETRY_TIME)
         else:
